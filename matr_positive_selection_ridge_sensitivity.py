@@ -271,6 +271,7 @@ def main() -> int:
                 sys.executable, str(signal_script),
                 "--root", str(root), "--matr", str(matr),
                 "--out-dir", str(signal_out),
+                "--fold-assignment", str(primary_out / "fold_assignment.csv"),
                 "--R", str(args.R), "--mc", str(args.signal_mc),
                 "--ridge-slope", str(ridge),
             ]

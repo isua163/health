@@ -360,8 +360,12 @@ def _bootstrap_support_overrides(root: Path) -> tuple[list[str], bool]:
 def _update_figure_reference(root: Path, records: dict[str, dict[str, float]], primary_ready: bool) -> None:
     if not primary_ready:
         return
-    path = root / "manuscript" / "results" / "reference_values.json"
-    if not path.exists():
+    candidates = [
+        root / "results" / "reference_values.json",
+        root / "manuscript" / "results" / "reference_values.json",
+    ]
+    path = next((candidate for candidate in candidates if candidate.exists()), None)
+    if path is None:
         return
     d = json.loads(path.read_text(encoding="utf-8-sig"))
     for batch, values in records.items():
@@ -377,10 +381,24 @@ def main() -> int:
     p.add_argument("--output", type=Path, default=None)
     a = p.parse_args()
     root = a.root.resolve()
-    src = root / "results" / "generated_results_template.tex"
-    out = (a.output or root / "manuscript" / "generated_results.tex").resolve()
-
+    template = root / "results" / "generated_results_template.tex"
+    flat_output = root / "generated_results.tex"
+    nested_output = root / "manuscript" / "generated_results.tex"
+    if a.output is not None:
+        out = a.output.resolve()
+    elif (root / "manuscript.tex").exists() or flat_output.exists():
+        out = flat_output.resolve()
+    else:
+        out = nested_output.resolve()
+    src = template if template.exists() else out
+    if not src.exists():
+        raise FileNotFoundError(
+            f"Missing macro template. Expected {template} or existing {out}."
+        )
     text = src.read_text(encoding="utf-8-sig")
+    marker = "% Dynamic revision overrides written by build_manuscript_results.py"
+    if marker in text:
+        text = text.split(marker, 1)[0].rstrip()
     additions: list[str] = ["", "% Dynamic revision overrides written by build_manuscript_results.py"]
     additions.extend(_simulation_overrides(root))
     primary, primary_ready, records = _primary_overrides(root)
@@ -406,7 +424,10 @@ def main() -> int:
     _update_figure_reference(root, records, primary_ready)
 
     boot_src = root / "results" / "matr_bootstrap" / "redesign_summary.csv"
-    fig_dst = root / "manuscript" / "results" / "bootstrap_redesign_summary.csv"
+    if (root / "manuscript.tex").exists():
+        fig_dst = root / "results" / "bootstrap_redesign_summary.csv"
+    else:
+        fig_dst = root / "manuscript" / "results" / "bootstrap_redesign_summary.csv"
     if boot_src.exists() and boot_ready:
         fig_dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(boot_src, fig_dst)

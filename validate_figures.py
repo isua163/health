@@ -15,7 +15,13 @@ def _command(name: str, path: Path) -> subprocess.CompletedProcess[str] | None:
     exe = shutil.which(name)
     if exe is None:
         return None
-    return subprocess.run([exe, str(path)], capture_output=True, text=True)
+    return subprocess.run([exe, str(path)], capture_output=True, text=True, check=False)
+
+
+def _layout(root: Path) -> tuple[Path, Path]:
+    if (root / "manuscript.tex").is_file():
+        return root / "manuscript.tex", root / "figures"
+    return root / "manuscript" / "manuscript.tex", root / "manuscript" / "figures"
 
 
 def main() -> int:
@@ -24,8 +30,7 @@ def main() -> int:
     args = parser.parse_args()
 
     root = args.root.resolve()
-    manuscript = root / "manuscript" / "manuscript.tex"
-    figures = root / "manuscript" / "figures"
+    manuscript, figures = _layout(root)
     errors: list[str] = []
 
     if not manuscript.is_file():

@@ -130,6 +130,12 @@ def main() -> int:
     ap.add_argument("--root", required=True, type=Path)
     ap.add_argument("--matr", required=True, type=Path)
     ap.add_argument("--out-dir", type=Path, default=None)
+    ap.add_argument(
+        "--fold-assignment", type=Path, default=None,
+        help=("CSV containing unit_id and fold. Defaults first to the sibling "
+              "primary ridge output, then to results/matr_primary, then to the "
+              "legacy results/matr_cohort location."),
+    )
     ap.add_argument("--R", type=int, default=200)
     ap.add_argument("--mc", type=int, default=32)
     ap.add_argument("--seed", type=int, default=20260724)
@@ -150,13 +156,26 @@ def main() -> int:
     if args.R < 1 or args.mc < 1 or args.checkpoint_every < 1:
         raise ValueError("R, mc, and checkpoint-every must be positive")
 
+    fold_candidates = []
+    if args.fold_assignment is not None:
+        fold_candidates.append(args.fold_assignment.expanduser().resolve())
+    # During the ridge sweep, signal_audit and primary are sibling directories.
+    fold_candidates.extend([
+        out.parent / "primary" / "fold_assignment.csv",
+        root / "results" / "matr_primary" / "fold_assignment.csv",
+        root / "results" / "matr_cohort" / "fold_assignment.csv",  # legacy layout
+    ])
+    fold_path = next((p for p in fold_candidates if p.exists()), None)
+    if fold_path is None:
+        tried = "\n  ".join(str(p) for p in fold_candidates)
+        raise FileNotFoundError(f"No fold assignment found. Tried:\n  {tried}")
+
     required = [
         root / "code" / "matr_data.py",
         root / "code" / "src" / "matr_ipcw.py",
         root / "code" / "src" / "matr_aipw.py",
         root / "code" / "src" / "_survival.py",
-        root / "results" / "matr_cohort/endpoint_review.csv",
-        root / "results" / "matr_cohort/fold_assignment.csv",
+        root / "results" / "matr_cohort" / "endpoint_review.csv",
     ]
     for path in required:
         if not path.exists():
@@ -171,7 +190,7 @@ def main() -> int:
                 if str(r.get("primary_IR_cohort", "")).lower() in {"true", "1", "yes"}]
     if len(endpoint) != 124:
         raise RuntimeError(f"expected 124 units, got {len(endpoint)}")
-    fold_rows = read_csv(required[5])
+    fold_rows = read_csv(fold_path)
     fold_by_id = {r["unit_id"]: int(r["fold"]) for r in fold_rows}
     schema: list[Any] = []
     cells = audit.harmonize(audit.read_raw_cells(matr, schema))
