@@ -1,3 +1,7 @@
+# Notice
+
+This package does not redistribute the MATR or XJTU-SY raw datasets. Users must obtain them from their original public sources and comply with the corresponding terms of use. Inclusion of third-party dataset readers and citations does not grant rights in those datasets. No software license has been added or inferred by the packaging process.
+
 # External data requirements
 
 Raw research data are not redistributed in this package. Place the public data outside the package and pass their directories at run time.
