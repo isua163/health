@@ -1,3 +1,29 @@
+# External data requirements
+
+Raw research data are not redistributed in this package. Place the public data outside the package and pass their directories at run time.
+
+## MATR battery data
+
+The MATR directory must directly contain these four MATLAB v7.3/HDF5 files:
+
+```text
+2017-05-12_batchdata_updated_struct_errorcorrect.mat
+2017-06-30_batchdata_updated_struct_errorcorrect.mat
+2018-04-12_batchdata_updated_struct_errorcorrect.mat
+2019-01-24_batchdata_updated_struct_errorcorrect.mat
+```
+
+The author's completed audit read 185 raw cells, retained 169 units under the 95% completeness rule, and formed the primary internal-resistance cohort of 124 cells with batch counts 41, 43, and 40. The scripts independently audit these conditions before analysis.
+
+## XJTU-SY bearing data
+
+`code/src/data_xjtu.py` accepts either of the commonly distributed layouts:
+
+1. one `.mat` file per bearing; or
+2. per-record CSV files under condition and bearing subdirectories.
+
+Pass the dataset root through `--xjtu`. The package does not treat test termination as independently adjudicated physical failure.
+
 ## Simulation
 
 - `simulation_benchmark.py` -- known-DGP implementation and misspecification grid.
